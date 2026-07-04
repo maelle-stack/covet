@@ -212,7 +212,7 @@ create table commitments (
     check (commitment_type in ('rent','essential_bill','insurance','debt_minimum','subscription','event','travel','fee','habit','goal','other')),
   hardness text not null check (hardness in ('hard','semi_hard','soft')),
   status text not null default 'candidate'
-    check (status in ('candidate','confirmed','denied','paused','completed','expired')),
+    check (status in ('candidate','protected','partial','at_risk','denied','completed','paused')),
   protected_amount bigint not null default 0,
   protection_start_at timestamptz,
   confidence smallint check (confidence between 0 and 100),

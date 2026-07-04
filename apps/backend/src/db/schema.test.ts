@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
   ARCHETYPES,
   COMMITMENT_HARDNESS,
+  COMMITMENT_STATUSES,
   DEBT_PRESSURE_LEVELS,
   EXTERNAL_CONFIDENCE_LABELS,
   NOTIFICATION_PRIVACY_LEVELS,
@@ -61,6 +62,7 @@ describe('0001_initial_schema.sql', () => {
       ['spend statuses', SPEND_STATUSES],
       ['strictness levels', STRICTNESS_LEVELS],
       ['commitment hardness', COMMITMENT_HARDNESS],
+      ['commitment statuses', COMMITMENT_STATUSES],
       ['debt pressure tiers', DEBT_PRESSURE_LEVELS],
       ['obligation pressure levels', OBLIGATION_PRESSURE_LEVELS],
       ['archetypes', ARCHETYPES],
@@ -103,5 +105,14 @@ describe('0001_initial_schema.sql', () => {
 
   it('sale alerts default to off', () => {
     expect(sql).toContain('sale_alerts_enabled boolean not null default false');
+  });
+
+  it('preserves the protected/partial/at_risk commitment protection states', () => {
+    // These three are load-bearing for Safe to Spend, Upcoming, and the
+    // Notification Engine — a schema change must not collapse them back
+    // into a single "confirmed" status.
+    expect(COMMITMENT_STATUSES).toEqual(
+      expect.arrayContaining(['protected', 'partial', 'at_risk']),
+    );
   });
 });
