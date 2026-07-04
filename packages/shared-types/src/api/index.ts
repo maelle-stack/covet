@@ -1,12 +1,14 @@
 /**
- * Shared API request/response contract types, defined alongside the backend
- * routes in Phase 2+ per docs/05_engineering_architecture.md.
- *
- * Planned endpoint groups: /auth, /user, /onboarding, /bank-connections,
- * /calendar-connections, /transactions, /commitments, /recurring, /patterns,
- * /safe-to-spend, /purchase-checks, /vaults, /notifications, /insights,
- * /settings, /privacy.
- *
- * Intentionally empty until the corresponding backend service is implemented.
+ * Typed API contracts for the endpoints named in
+ * docs/05_engineering_architecture.md. Contracts for the remaining endpoint
+ * groups (/auth, /user, /onboarding, /bank-connections,
+ * /calendar-connections, /transactions, /recurring, /vaults, /insights,
+ * /settings, /privacy) are added alongside their backend implementations
+ * in Phases 3–6 so contracts and handlers land together.
  */
-export {};
+export * from './envelope';
+export * from './safe-to-spend';
+export * from './commitments';
+export * from './patterns';
+export * from './purchase-checks';
+export * from './notifications';
