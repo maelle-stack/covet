@@ -1,30 +1,35 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
 
-import { Screen, Text } from '../components';
+import { Screen } from '../components';
 import { useCovetFonts } from '../design/fonts';
 import { ThemeProvider } from '../design/theme';
+import { HomeScreen } from '../screens/HomeScreen';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Query GC schedules a long setTimeout that keeps the Jest worker
+      // alive after tests; disable it under test only.
+      gcTime: process.env.NODE_ENV === 'test' ? Infinity : undefined,
+    },
+  },
+});
 
 /**
  * App shell. Fonts gate the first paint so the serif display never flashes
- * a system font. Screens and navigation land in the next Phase 5
- * checkpoints — this renders only the wordmark placeholder for now.
+ * a system font. Renders Home; the remaining screens and tab switching
+ * land in the next Phase 5 checkpoints.
  */
 export function App() {
   const { loaded } = useCovetFonts();
 
   return (
-    <ThemeProvider>
-      {loaded ? (
-        <Screen>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text variant="logo">COVET</Text>
-          </View>
-        </Screen>
-      ) : (
-        <Screen />
-      )}
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        {loaded ? <HomeScreen /> : <Screen />}
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

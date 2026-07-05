@@ -5,3 +5,6 @@ export * from './Button';
 export * from './BottomNav';
 export * from './StatusPill';
 export * from './WalletVisual';
+export * from './Wordmark';
+export * from './ChatFab';
+export * from './icons';

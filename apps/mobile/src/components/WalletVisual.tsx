@@ -29,7 +29,11 @@ export function WalletVisual({ status, width = 300 }: WalletVisualProps) {
   const breath = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (reducedMotion) {
+    // The idle loop ticks via JS timers under Jest, firing state updates
+    // outside act() and keeping the worker alive — skip ambient motion in
+    // tests, exactly as we do for reduced motion.
+    const isTestEnv = process.env.NODE_ENV === 'test';
+    if (reducedMotion || isTestEnv) {
       breath.setValue(0);
       return;
     }
