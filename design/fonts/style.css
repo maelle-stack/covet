@@ -1,0 +1,9 @@
+@font-face {
+    font-family: 'The Silver Editorial';
+    src: local('The Silver Editorial Regular'), local('The-Silver-Editorial-Regular'),
+        url('TheSilverEditorial-Regular.woff2') format('woff2'),
+        url('TheSilverEditorial-Regular.woff') format('woff'),
+        url('TheSilverEditorial-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
