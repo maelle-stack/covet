@@ -219,6 +219,58 @@ describe('calculateSafeToSpend — scenarios', () => {
     expect(farSnapshot.amount).toBeGreaterThan(nearSnapshot.amount);
   });
 
+  it('reports a semi-hard commitment in protectedSemiHardCommitments, not protectedHardCommitments', () => {
+    const birthdayDinner = makeCommitment({
+      title: 'Birthday dinner',
+      hardness: 'semi_hard',
+      amount: 100_00,
+      status: 'protected',
+      dueAt: '2026-07-05T00:00:00Z',
+    });
+    const snapshot = calculateSafeToSpend(makeInput({ commitments: [birthdayDinner] }));
+
+    expect(snapshot.protectedSemiHardCommitments.map((c) => c.title)).toContain('Birthday dinner');
+    expect(snapshot.protectedHardCommitments.map((c) => c.title)).not.toContain('Birthday dinner');
+    expect(snapshot.explanationSummary).toContain('Birthday dinner');
+  });
+
+  it('internalProjectedPace reflects a known Saturday brunch habit even though dailyPace stays flat', () => {
+    const brunch = makeRecurringItem({
+      title: 'Weekend brunch',
+      recurringType: 'habit',
+      hardness: 'soft',
+      amountEstimate: 75_00,
+      nextExpectedAt: '2026-07-11T00:00:00Z', // a Saturday inside this 10-day cycle
+    });
+    const snapshot = calculateSafeToSpend(
+      makeInput({ accounts: [makeAccount({ currentBalance: 2000_00 })], recurringItems: [brunch] }),
+    );
+
+    expect(snapshot.dailyPace).not.toBeNull();
+    expect(snapshot.internalProjectedPace).not.toBeNull();
+    // The tightest day (brunch Saturday) pulls the internal pace below the
+    // flat, even-split user-facing pace.
+    expect(snapshot.internalProjectedPace as number).toBeLessThan(snapshot.dailyPace as number);
+
+    const saturday = snapshot.paceProjection.find((d) => d.date === '2026-07-11');
+    expect(saturday?.drivers).toContain('Weekend brunch');
+    expect(saturday?.expectedFlexibleRoom).toBe(snapshot.internalProjectedPace);
+  });
+
+  it('internalProjectedPace equals dailyPace when nothing uneven is known in the cycle', () => {
+    const snapshot = calculateSafeToSpend(makeInput());
+    expect(snapshot.internalProjectedPace).toBe(snapshot.dailyPace);
+  });
+
+  it('internalProjectedPace and paceProjection are both null/empty-safe when income is unconfirmed', () => {
+    const snapshot = calculateSafeToSpend(
+      makeInput({ incomeCadence: { type: 'irregular', confirmed: false, nextExpectedAt: null } }),
+    );
+    expect(snapshot.internalProjectedPace).toBeNull();
+    // The day-by-day array itself is still populated for internal/notification use.
+    expect(snapshot.paceProjection.length).toBeGreaterThan(0);
+  });
+
   it('an active vault reduces Safe to Spend; a passive (saved, not protected) vault does not', () => {
     const active = makeVault({ activelyProtected: true, status: 'active', targetAmount: 200_00 });
     const passive = makeVault({ activelyProtected: false, status: 'saved', targetAmount: 200_00 });

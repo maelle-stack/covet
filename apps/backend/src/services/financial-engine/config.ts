@@ -46,7 +46,13 @@ export interface FinancialEngineConfig {
     severeMax: number; // < 0.90
     // >= severeMax is 'critical'
   };
-  /** Debt pressure adjustment as a fraction of total revolving credit balance, per tier. */
+  /**
+   * Debt pressure adjustment as a fraction of total revolving credit
+   * balance, per tier. Approved v1 defaults (healthy 0%, normal 1%,
+   * elevated 3%, high 6%, severe 12%, critical 20%) — these are
+   * assumptions, not observed data, and should be tuned once the engine
+   * has real usage to learn from.
+   */
   debtPressureAdjustmentRates: {
     healthy: number;
     normal: number;
@@ -93,7 +99,10 @@ export interface FinancialEngineConfig {
    * Internal confidence score (0-100) starts at 100 and is reduced by these
    * penalties (docs/02_financial_engine.md factors: fresh bank data,
    * confirmed income cadence, understood recurring obligations, low
-   * pending/ambiguous transactions, connected calendar).
+   * pending/ambiguous transactions, connected calendar). These weights and
+   * the label thresholds below are approved v1 assumptions, not derived
+   * from real usage — they should be tuned once the engine has actual user
+   * outcomes (notification accuracy, user-reported trust) to learn from.
    */
   confidencePenalties: {
     bankNotActive: number;
@@ -108,6 +117,19 @@ export interface FinancialEngineConfig {
   confidenceLabelThresholds: {
     high: number;
     medium: number;
+  };
+
+  /**
+   * The internal pace projection is capped at this many days, primarily to
+   * bound the array size for the irregular-income 30-day rolling window.
+   */
+  maxPaceProjectionDays: number;
+  /** A day's total known-due amount vs. its base daily pace, used to classify PaceProjectionDay.riskLevel. */
+  paceRiskThresholds: {
+    /** total due / baseDailyPace >= this -> 'elevated'. */
+    elevatedDueRatio: number;
+    /** total due / baseDailyPace >= this -> 'high'. */
+    highDueRatio: number;
   };
 }
 
@@ -178,6 +200,12 @@ export const DEFAULT_FINANCIAL_ENGINE_CONFIG: FinancialEngineConfig = {
   confidenceLabelThresholds: {
     high: 75,
     medium: 45,
+  },
+
+  maxPaceProjectionDays: 31,
+  paceRiskThresholds: {
+    elevatedDueRatio: 0.5,
+    highDueRatio: 1.0,
   },
 };
 

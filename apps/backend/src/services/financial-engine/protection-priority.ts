@@ -14,7 +14,8 @@ import { clamp } from './money';
  * Commitments and RecurringItems so both can share one priority queue and
  * allocation pass. `kind` distinguishes them because only Commitments are
  * reported back in SafeToSpendSnapshot.protectedHardCommitments /
- * protectedSoftCommitments (docs/05_engineering_architecture.md).
+ * protectedSemiHardCommitments / protectedSoftCommitments
+ * (docs/05_engineering_architecture.md).
  */
 export interface ProtectableItem {
   kind: 'commitment' | 'recurring_item';

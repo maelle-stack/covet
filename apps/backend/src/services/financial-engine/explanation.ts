@@ -9,11 +9,12 @@ import type { Cents, ProtectedCommitmentRef } from '@covet/shared-types';
  */
 export function buildExplanationSummary(
   protectedHard: readonly ProtectedCommitmentRef[],
+  protectedSemiHard: readonly ProtectedCommitmentRef[],
   protectedSoft: readonly ProtectedCommitmentRef[],
   dailyPace: Cents | null,
   daysUntilNextIncome: number | null,
 ): string {
-  const titles = [...protectedHard, ...protectedSoft].map((c) => c.title);
+  const titles = [...protectedHard, ...protectedSemiHard, ...protectedSoft].map((c) => c.title);
 
   const protectingClause =
     titles.length > 0

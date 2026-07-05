@@ -11,6 +11,10 @@ operations go through backend services, not direct client DB access.
   CalendarConnection, CalendarEvent, Commitment, RecurringItem, Pattern,
   ArchetypeResult, SafeToSpendSnapshot, PurchaseCheck, Vault, Notification,
   Insight, SyncJob, AuditEvent).
+- `migrations/0002_semi_hard_and_pace_projection.sql` — adds
+  `protected_semi_hard_commitments` (previously folded into
+  `protected_hard_commitments`) and `pace_projection` to
+  `safe_to_spend_snapshots`.
 
 ## Conventions
 

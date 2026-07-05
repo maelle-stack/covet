@@ -16,6 +16,7 @@ import { computeInputsHash } from './inputs-hash';
 import { applyRate, roundDownToDollar } from './money';
 import { detectMajorChangeFlags } from './major-change';
 import { computeObligationPressure } from './obligation-pressure';
+import { buildPaceProjection, type PaceProjectionSourceItem } from './pace-projection';
 import { computePayCycle } from './pay-cycle';
 import { computePendingIncomeAdjustment } from './pending-income';
 import {
@@ -185,10 +186,35 @@ export function calculateSafeToSpend(input: SafeToSpendEngineInput): SafeToSpend
     payCycle.daysUntilNextIncome !== null && payCycle.daysUntilNextIncome > 0
       ? Math.floor(amount / payCycle.daysUntilNextIncome)
       : null;
-  // v1 simplification: no day-by-day habit distribution modeled yet, so the
-  // internal projected pace equals the simple daily pace. A real weighted
-  // projection is future work, not a spec literal for Phase 3.
-  const internalProjectedPace = dailyPace;
+
+  const allAllocations = [...hardSemiHardItems, ...softItems].map((i) => allocations.get(i.id)!);
+
+  const paceProjectionSourceItems: PaceProjectionSourceItem[] = allAllocations.map((a) => ({
+    title: a.item.title,
+    hardness: a.item.hardness,
+    dueAt: a.item.dueAt,
+    expectedAmount: a.item.effectiveAmount,
+    isAtRisk: a.status === 'at_risk',
+  }));
+
+  const paceProjection = buildPaceProjection(
+    payCycle.payCycleStart,
+    payCycle.payCycleEnd,
+    amount,
+    paceProjectionSourceItems,
+    config,
+  );
+
+  // The internal projected pace is the tightest day's expected flexible
+  // room across the cycle — not a copy of the flat dailyPace — so a known
+  // Saturday brunch habit or an upcoming birthday dinner pulls it down
+  // below the even-split number. Gated to null exactly when dailyPace is
+  // null, since both represent "how tight is a day in this cycle" and that
+  // question is unanswerable without a defined days-until-income horizon.
+  const internalProjectedPace =
+    payCycle.daysUntilNextIncome !== null && payCycle.daysUntilNextIncome > 0
+      ? Math.min(...paceProjection.map((d) => d.expectedFlexibleRoom))
+      : null;
 
   // --- Protected commitment refs for the explanation layer -----------------
   const toRef = (a: AllocatedItem): ProtectedCommitmentRef => ({
@@ -198,18 +224,25 @@ export function calculateSafeToSpend(input: SafeToSpendEngineInput): SafeToSpend
     protectedAmount: a.protectedAmount,
   });
 
-  const protectedHardCommitments: ProtectedCommitmentRef[] = hardSemiHardItems
-    .map((i) => allocations.get(i.id)!)
-    .filter((a) => a.item.kind === 'commitment' && a.protectedAmount > 0)
+  const protectedCommitmentAllocations = allAllocations.filter(
+    (a) => a.item.kind === 'commitment' && a.protectedAmount > 0,
+  );
+
+  const protectedHardCommitments: ProtectedCommitmentRef[] = protectedCommitmentAllocations
+    .filter((a) => a.item.hardness === 'hard')
     .map(toRef);
 
-  const protectedSoftCommitments: ProtectedCommitmentRef[] = softItems
-    .map((i) => allocations.get(i.id)!)
-    .filter((a) => a.item.kind === 'commitment' && a.protectedAmount > 0)
+  const protectedSemiHardCommitments: ProtectedCommitmentRef[] = protectedCommitmentAllocations
+    .filter((a) => a.item.hardness === 'semi_hard')
+    .map(toRef);
+
+  const protectedSoftCommitments: ProtectedCommitmentRef[] = protectedCommitmentAllocations
+    .filter((a) => a.item.hardness === 'soft')
     .map(toRef);
 
   const explanationSummary = buildExplanationSummary(
     protectedHardCommitments,
+    protectedSemiHardCommitments,
     protectedSoftCommitments,
     dailyPace,
     payCycle.daysUntilNextIncome,
@@ -258,10 +291,12 @@ export function calculateSafeToSpend(input: SafeToSpendEngineInput): SafeToSpend
     daysUntilNextIncome: payCycle.daysUntilNextIncome,
     dailyPace,
     internalProjectedPace,
+    paceProjection,
     status,
     confidenceScore: confidence.score,
     externalConfidenceLabel: confidence.label,
     protectedHardCommitments,
+    protectedSemiHardCommitments,
     protectedSoftCommitments,
     debtPressureLevel: debtPressure.level,
     obligationPressureLevel: obligationPressure.level,

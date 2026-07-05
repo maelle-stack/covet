@@ -1,9 +1,4 @@
-import type {
-  ISODateTimeString,
-  LocalTimeString,
-  NotificationPrivacyLevel,
-  UUID,
-} from '../common';
+import type { ISODateTimeString, LocalTimeString, NotificationPrivacyLevel, UUID } from '../common';
 
 /** Quiet hours window in the user's local time. Default 21:00 → 09:00. */
 export interface QuietHours {

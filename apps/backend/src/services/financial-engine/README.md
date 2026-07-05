@@ -24,6 +24,8 @@ Entry point: `calculateSafeToSpend(input: SafeToSpendEngineInput): SafeToSpendSn
   resolution (protected/partial/at_risk).
 - `vaults.ts` — actively-protected vault allocation (remaining unmet target,
   cash-bounded).
+- `pace-projection.ts` — the internal day-by-day pace plan
+  (`PaceProjectionDay[]`) that `internalProjectedPace` is derived from.
 - `behavior-buffer.ts` — archetype × strictness buffer rate, plus the
   HIGH_OBLIGATION_PRESSURE bonus.
 - `obligation-pressure.ts` — mandatory-obligation-to-income ratio and the
@@ -50,14 +52,10 @@ involved judgment calls the spec didn't fully resolve:
 
 1. **Semi-hard commitments allocate in the hard-tier priority zone**
    (after rent/essential-bills and debt minimums, before the emergency
-   floor), per docs/02_financial_engine.md's priority-order paragraph. The
-   `SafeToSpendSnapshot` output only has two commitment buckets
-   (`protectedHardCommitments` / `protectedSoftCommitments`) — semi-hard
-   commitments are reported in `protectedHardCommitments`. This is a gap
-   between the three-tier `CommitmentHardness` model and the two-bucket
-   snapshot output that predates this phase; flagging for a possible
-   follow-up (a third `protectedSemiHardCommitments` field) rather than
-   changing the already-approved snapshot shape unilaterally.
+   floor), per docs/02_financial_engine.md's priority-order paragraph.
+   They are reported in their own `protectedSemiHardCommitments` bucket on
+   the snapshot (Phase 3.1) — bucketing by `hardness`, independent of
+   *where* in the priority queue an item allocated.
 2. **Hard-hardness RecurringItems (e.g. an essential subscription) share
    the same priority tier as rent/essential-bill Commitments**, since both
    use the same `hardness` field and the spec's priority order is
@@ -68,9 +66,19 @@ involved judgment calls the spec didn't fully resolve:
    is within `atRiskDueSoonDays` does it become `at_risk`.
 4. **Vaults don't get a gradual due-date ramp** (unlike commitments) — v1
    reserves the full remaining unmet target, cash-bounded, in one step.
-5. **`internalProjectedPace` equals `dailyPace` in v1** — a real
-   day-of-week-weighted projection needs habit-by-weekday data not modeled
-   in this phase.
+5. **`internalProjectedPace` is the tightest day's `expectedFlexibleRoom`
+   across `paceProjection`** (Phase 3.1), not a copy of `dailyPace`. It
+   equals `dailyPace` only when nothing uneven is known in the cycle — that
+   convergence is expected, not a leftover bug. `paceProjection` uses each
+   item's full `effectiveAmount` (its expected/confirmed cost) on its due
+   date, not `protectedAmount` — the gradual protection ramp can leave
+   `protectedAmount` at 0 well before the due date, but the day still
+   carries the expected spend for pace-planning purposes. Both
+   `internalProjectedPace` and `paceProjection` are gated to
+   null/cycle-window-only when `daysUntilNextIncome` is null (irregular,
+   unconfirmed income) for `internalProjectedPace`; `paceProjection` itself
+   still populates over the 30-day rolling window in that case, since it's
+   internal-only and still useful to the Notification Engine.
 6. **Major-change flags are presence-based, not suppression-aware** (e.g.
    `connection_lost`-equivalent signals fire whenever the bank isn't
    active, every calculation, not just on the transition). Deduplication,
@@ -81,3 +89,8 @@ involved judgment calls the spec didn't fully resolve:
    _somewhat less_ than its full dollar amount — part of it would have
    gone to the floor/buffer anyway. This is mathematically consistent with
    the spec's percentage-based floor and buffer, not a bug.
+8. **Debt-pressure adjustment rates and confidence-scoring weights are
+   approved v1 assumptions** (`config.ts`), not derived from observed
+   usage. They should be revisited once the engine has real user outcomes
+   (notification accuracy, reported trust, actual payoff behavior) to
+   learn from.

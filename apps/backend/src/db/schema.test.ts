@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -17,7 +17,14 @@ import {
   USER_GOALS,
 } from '@covet/shared-types';
 
-const sql = readFileSync(join(__dirname, 'migrations', '0001_initial_schema.sql'), 'utf8');
+const migrationsDir = join(__dirname, 'migrations');
+// All migrations concatenated, in filename order, so tests reflect the full
+// schema as applied — not just the original 0001 file.
+const sql = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+  .map((f) => readFileSync(join(migrationsDir, f), 'utf8'))
+  .join('\n');
 
 /** Render a shared-types const array the way it appears in a CHECK constraint. */
 const asCheckList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(',');
@@ -114,5 +121,15 @@ describe('0001_initial_schema.sql', () => {
     expect(COMMITMENT_STATUSES).toEqual(
       expect.arrayContaining(['protected', 'partial', 'at_risk']),
     );
+  });
+
+  it('gives semi-hard commitments their own snapshot bucket, not folded into hard', () => {
+    expect(sql).toContain('protected_semi_hard_commitments jsonb not null default');
+    expect(sql).toContain('protected_hard_commitments jsonb not null default');
+    expect(sql).toContain('protected_soft_commitments jsonb not null default');
+  });
+
+  it('stores the internal pace projection', () => {
+    expect(sql).toContain('pace_projection jsonb not null default');
   });
 });

@@ -1,10 +1,4 @@
-import type {
-  Archetype,
-  ISODateTimeString,
-  StrictnessLevel,
-  UserGoal,
-  UUID,
-} from '../common';
+import type { Archetype, ISODateTimeString, StrictnessLevel, UserGoal, UUID } from '../common';
 
 /** Onboarding progression (docs/01_consumer_experience.md sequence). */
 export const ONBOARDING_STATUSES = [
