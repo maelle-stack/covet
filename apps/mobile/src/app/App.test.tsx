@@ -3,8 +3,8 @@ import { render } from '@testing-library/react-native';
 import { App } from './App';
 
 describe('App shell', () => {
-  it('renders without crashing, proving the app skeleton and test tooling wire up correctly', () => {
+  it('renders the wordmark once fonts are loaded (fonts are mocked as loaded in tests)', () => {
     const { getByText } = render(<App />);
-    expect(getByText('Covet')).toBeTruthy();
+    expect(getByText('COVET')).toBeTruthy();
   });
 });

@@ -1,16 +1,30 @@
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Screen, Text } from '../components';
+import { useCovetFonts } from '../design/fonts';
+import { ThemeProvider } from '../design/theme';
 
 /**
- * App shell placeholder. Navigation (Activity / Home / Upcoming per
- * docs/04_design_system.md) and real screens are built in Phase 5.
- * This intentionally renders no product UI yet.
+ * App shell. Fonts gate the first paint so the serif display never flashes
+ * a system font. Screens and navigation land in the next Phase 5
+ * checkpoints — this renders only the wordmark placeholder for now.
  */
 export function App() {
+  const { loaded } = useCovetFonts();
+
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Covet</Text>
+    <ThemeProvider>
+      {loaded ? (
+        <Screen>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text variant="logo">COVET</Text>
+          </View>
+        </Screen>
+      ) : (
+        <Screen />
+      )}
       <StatusBar style="auto" />
-    </View>
+    </ThemeProvider>
   );
 }
