@@ -2,25 +2,12 @@ import { Pressable, View } from 'react-native';
 
 import type { SafeToSpendSnapshot } from '@covet/shared-types';
 
-import {
-  BottomNav,
-  ChatFab,
-  Screen,
-  StatusPill,
-  Text,
-  WalletVisual,
-  Wordmark,
-} from '../components';
+import { ChatFab, Screen, StatusPill, Text, WalletVisual, Wordmark } from '../components';
 import { LockIcon, MenuIcon, SearchIcon } from '../components/icons';
 import { useTheme } from '../design/theme';
 import { useSafeToSpend } from '../hooks/useSafeToSpend';
+import { toMonthDay } from '../utils/dates';
 import { formatDollarsAndCents, formatWholeDollars } from '../utils/money';
-
-/** '2026-07-10' -> '07/10' (display formatting only). */
-function toMonthDay(isoDate: string): string {
-  const [, month = '', day = ''] = isoDate.split('-');
-  return `${month}/${day}`;
-}
 
 export interface HomeScreenProps {
   /** Wired to mocked Purchase Check once that screen exists (founder ruling #6). */
@@ -77,9 +64,6 @@ export function HomeScreen({ onOpenChat, onOpenMenu }: HomeScreenProps) {
           <ChatFab onPress={onOpenChat} />
         </View>
       </View>
-
-      {/* Tab order Activity / Upcoming / Home per the canonical mockups. */}
-      <BottomNav active="home" onChange={() => {}} />
     </Screen>
   );
 }

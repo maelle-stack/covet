@@ -11,11 +11,12 @@ import type {
 } from '@covet/shared-types';
 
 /**
- * Typed mock data for Phase 5 screens, shaped EXACTLY like the shared
- * domain models. This is display fuel only — no Safe to Spend math happens
- * client-side, and Phase 6 replaces this module with the real API client.
- * The demo state mirrors the canonical Home reference: $316 Safe to Spend,
- * YOU'RE GOOD, $50.00/day pace, three protected commitments.
+ * Typed fixture data backing the pre-integration API client, shaped
+ * EXACTLY like the shared domain models. The screens are production
+ * screens; only this data source is swapped for the real backend in
+ * Phase 6. No Safe to Spend math happens client-side. The demo state
+ * mirrors the canonical Home reference: $316 Safe to Spend, YOU'RE GOOD,
+ * $50.00/day pace, three protected commitments.
  */
 
 const USER_ID = 'demo-user';
@@ -304,6 +305,61 @@ export const demoVaults: Vault[] = [
     notificationPreferences: { affordabilityAlertsEnabled: true, saleAlertsEnabled: false },
     createdAt: '2026-06-10T00:00:00Z',
     updatedAt: NOW,
+  },
+  {
+    // Passive desire: saved but NOT actively protected, so it does not
+    // reduce Safe to Spend and Upcoming must present it as such.
+    id: 'vault-jacket',
+    userId: USER_ID,
+    title: 'Jacket',
+    targetAmount: 180_00,
+    currentProtectedAmount: 0,
+    desiredByDate: null,
+    status: 'saved',
+    activelyProtected: false,
+    source: 'user_entered',
+    merchant: null,
+    url: null,
+    imageAssetId: null,
+    affordabilityDate: '2026-07-10',
+    lastRecalculatedAt: NOW,
+    notificationPreferences: { affordabilityAlertsEnabled: true, saleAlertsEnabled: false },
+    createdAt: '2026-06-20T00:00:00Z',
+    updatedAt: NOW,
+  },
+];
+
+/**
+ * An Activity "Action": something that needs quick user attention
+ * (docs/01_consumer_experience.md). The copy is backend-authored — in
+ * production these come from the context/pattern services; the screen
+ * never composes review language itself.
+ */
+export interface ActivityAction {
+  id: string;
+  kind: 'commitment_candidate' | 'recurring_detected' | 'pattern_confirmation';
+  body: string;
+  relatedEntityId: string;
+}
+
+export const demoActions: ActivityAction[] = [
+  {
+    id: 'action-birthday-dinner',
+    kind: 'commitment_candidate',
+    body: "Does Saturday's birthday dinner need money set aside? I'd plan around $90.",
+    relatedEntityId: 'commitment-birthday-dinner',
+  },
+  {
+    id: 'action-brunch',
+    kind: 'recurring_detected',
+    body: 'Looks like brunch usually lands around $75 on weekends. Plan around this?',
+    relatedEntityId: 'recurring-brunch',
+  },
+  {
+    id: 'action-payday',
+    kind: 'pattern_confirmation',
+    body: 'Looks like payday is every other Friday. Confirm?',
+    relatedEntityId: 'pattern-payday',
   },
 ];
 

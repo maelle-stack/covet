@@ -4,6 +4,7 @@ export * from './Card';
 export * from './Button';
 export * from './BottomNav';
 export * from './StatusPill';
+export * from './CheckX';
 export * from './WalletVisual';
 export * from './Wordmark';
 export * from './ChatFab';

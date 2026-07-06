@@ -53,15 +53,6 @@ describe('HomeScreen', () => {
     expect(getByLabelText('Chat')).toBeTruthy();
   });
 
-  it('renders the bottom nav in the canonical order with Home active', async () => {
-    const { findAllByRole } = renderHome();
-    const tabs = await findAllByRole('tab');
-    expect(tabs.map((t) => t.props.accessibilityLabel)).toEqual(['Activity', 'Upcoming', 'Home']);
-    const selected = tabs.filter((t) => t.props.accessibilityState?.selected);
-    expect(selected).toHaveLength(1);
-    expect(selected[0]?.props.accessibilityLabel).toBe('Home');
-  });
-
   it('fires the chat and menu callbacks (search stays a no-op per founder ruling)', async () => {
     const onOpenChat = jest.fn();
     const onOpenMenu = jest.fn();
