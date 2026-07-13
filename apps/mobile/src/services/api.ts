@@ -1,9 +1,11 @@
 import type {
   Commitment,
   Insight,
+  PurchaseCheck,
   RecurringItem,
   SafeToSpendSnapshot,
   Transaction,
+  UserSettings,
   Vault,
 } from '@covet/shared-types';
 
@@ -11,7 +13,10 @@ import {
   demoActions,
   demoCommitments,
   demoInsights,
+  demoPurchaseCheckReplies,
+  demoPurchaseCheckResponse,
   demoRecurring,
+  demoSettings,
   demoSnapshot,
   demoTransactions,
   demoVaults,
@@ -71,6 +76,26 @@ export const api = {
       recurring: demoRecurring,
       vaults: demoVaults,
     };
+  },
+
+  async getUserSettings(): Promise<UserSettings> {
+    return demoSettings;
+  },
+
+  /** The seeded opening exchange the Purchase Check thread starts from. */
+  async getSeedPurchaseCheck(): Promise<PurchaseCheck> {
+    return demoPurchaseCheckResponse;
+  },
+
+  /**
+   * Returns a canned decision for the Nth message sent this session. Real
+   * parsing + affordability happen on the backend in Phase 6; this cycles
+   * fixture-backed yes/wait/no responses. `rawInput` is echoed back so the
+   * caller can show the user's own words, but it is NOT parsed.
+   */
+  async createPurchaseCheck(_rawInput: string, index: number): Promise<PurchaseCheck> {
+    const replies = demoPurchaseCheckReplies;
+    return replies[index % replies.length] as PurchaseCheck;
   },
 };
 

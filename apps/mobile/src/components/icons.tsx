@@ -39,6 +39,29 @@ export function SearchIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+export function CloseIcon({ size = 20 }: { size?: number }) {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityLabel="close"
+      style={{ width: size, height: size, justifyContent: 'center' }}
+    >
+      {[45, -45].map((deg) => (
+        <View
+          key={deg}
+          style={{
+            position: 'absolute',
+            width: size,
+            height: 1.5,
+            backgroundColor: theme.color.text.primary,
+            transform: [{ rotate: `${deg}deg` }],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 export function MenuIcon({ size = 22 }: { size?: number }) {
   const theme = useTheme();
   return (

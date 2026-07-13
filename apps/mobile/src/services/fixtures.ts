@@ -364,8 +364,11 @@ export const demoActions: ActivityAction[] = [
 ];
 
 /**
- * Canned Purchase Check exchange. The decision text comes from the
- * "backend" fixture — the UI never computes affordability.
+ * Canned Purchase Check exchanges. Every decision and its reason come from
+ * the "backend" fixture — the UI never parses input or computes
+ * affordability. The seeded thread opens on the $180 jacket "wait"
+ * exchange; `demoPurchaseCheckReplies` supplies canned responses returned
+ * (in order) as the user sends messages, covering yes / wait / no.
  */
 export const demoPurchaseCheckResponse: PurchaseCheck = {
   id: 'pc-jacket',
@@ -386,3 +389,39 @@ export const demoPurchaseCheckResponse: PurchaseCheck = {
   createdAt: NOW,
   followUpAt: '2026-07-10T14:00:00Z',
 };
+
+export const demoPurchaseCheckReplies: PurchaseCheck[] = [
+  {
+    ...demoPurchaseCheckResponse,
+    id: 'pc-coffee',
+    rawInput: 'can i grab coffee?',
+    parsedItemName: 'Coffee',
+    parsedPrice: 6_00,
+    decision: 'yes',
+    decisionReason: "You're good. Rent and your birthday dinner are still covered.",
+    safeToSpendAfterHypothetical: 310_00,
+    followUpAt: null,
+  },
+  {
+    ...demoPurchaseCheckResponse,
+    id: 'pc-flight',
+    rawInput: 'can i book this $420 flight?',
+    parsedItemName: 'Flight',
+    parsedPrice: 420_00,
+    decision: 'no',
+    decisionReason: "Let's not — this would put rent at risk before payday.",
+    safeToSpendAfterHypothetical: -104_00,
+    statusAtDecision: 'YOURE_GOOD',
+    followUpAt: null,
+  },
+  {
+    ...demoPurchaseCheckResponse,
+    id: 'pc-jacket-2',
+    rawInput: 'what about the jacket now?',
+    parsedItemName: 'Jacket',
+    parsedPrice: 180_00,
+    decision: 'wait',
+    decisionReason: "I'd still wait until Friday. You'll have room once payday lands.",
+    followUpAt: '2026-07-10T14:00:00Z',
+  },
+];

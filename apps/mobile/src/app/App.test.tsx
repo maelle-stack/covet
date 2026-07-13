@@ -5,7 +5,7 @@ import { useAppStore } from '../state/app-store';
 
 describe('App shell', () => {
   beforeEach(() => {
-    useAppStore.setState({ activeTab: 'home' });
+    useAppStore.setState({ activeTab: 'home', overlay: 'none' });
   });
 
   it('boots into Home with the Safe to Spend amount once fonts load (mocked as loaded)', async () => {
@@ -44,5 +44,22 @@ describe('App shell', () => {
     await findByText('Insights');
     fireEvent.press(tabs[2]!); // Home
     expect(await findByText('$316')).toBeTruthy();
+  });
+
+  it('opens Purchase Check from the Home Chat FAB, and closes it', async () => {
+    const { findByLabelText, findByText, queryByText } = render(<App />);
+    fireEvent.press(await findByLabelText('Chat'));
+    expect(await findByText('Purchase Check')).toBeTruthy();
+    expect(await findByText('can i buy this $180 jacket?')).toBeTruthy();
+    fireEvent.press(await findByLabelText('Close'));
+    expect(queryByText('Purchase Check')).toBeNull();
+  });
+
+  it('opens Settings from the hamburger menu, and closes it', async () => {
+    const { findByLabelText, findByText, queryByText } = render(<App />);
+    fireEvent.press(await findByLabelText('Menu'));
+    expect(await findByText('How Covet manages money')).toBeTruthy();
+    fireEvent.press(await findByLabelText('Close'));
+    expect(queryByText('How Covet manages money')).toBeNull();
   });
 });
