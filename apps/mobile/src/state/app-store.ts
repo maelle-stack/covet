@@ -12,16 +12,21 @@ export type Overlay = 'none' | 'purchase-check' | 'settings';
  * default tab.
  */
 interface AppState {
+  /** First run shows Onboarding; completing it routes into the tab shell. */
+  onboardingComplete: boolean;
   activeTab: NavTab;
   overlay: Overlay;
+  completeOnboarding: () => void;
   setActiveTab: (tab: NavTab) => void;
   openOverlay: (overlay: Exclude<Overlay, 'none'>) => void;
   closeOverlay: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  onboardingComplete: false,
   activeTab: 'home',
   overlay: 'none',
+  completeOnboarding: () => set({ onboardingComplete: true, activeTab: 'home' }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   openOverlay: (overlay) => set({ overlay }),
   closeOverlay: () => set({ overlay: 'none' }),

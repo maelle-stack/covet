@@ -7,6 +7,7 @@ import { useCovetFonts } from '../design/fonts';
 import { ThemeProvider, useTheme } from '../design/theme';
 import { ActivityScreen } from '../screens/ActivityScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PurchaseCheckScreen } from '../screens/PurchaseCheckScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { UpcomingScreen } from '../screens/UpcomingScreen';
@@ -30,6 +31,8 @@ const queryClient = new QueryClient({
  */
 function Shell() {
   const theme = useTheme();
+  const onboardingComplete = useAppStore((s) => s.onboardingComplete);
+  const completeOnboarding = useAppStore((s) => s.completeOnboarding);
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const overlay = useAppStore((s) => s.overlay);
@@ -37,6 +40,12 @@ function Shell() {
   const closeOverlay = useAppStore((s) => s.closeOverlay);
 
   const openSettings = () => openOverlay('settings');
+
+  // First run: the full onboarding flow precedes the tab shell and routes
+  // into Home on completion.
+  if (!onboardingComplete) {
+    return <OnboardingScreen onComplete={completeOnboarding} />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.color.background.primary }}>

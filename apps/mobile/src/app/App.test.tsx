@@ -5,7 +5,8 @@ import { useAppStore } from '../state/app-store';
 
 describe('App shell', () => {
   beforeEach(() => {
-    useAppStore.setState({ activeTab: 'home', overlay: 'none' });
+    // These specs exercise the tab shell, which sits behind onboarding.
+    useAppStore.setState({ onboardingComplete: true, activeTab: 'home', overlay: 'none' });
   });
 
   it('boots into Home with the Safe to Spend amount once fonts load (mocked as loaded)', async () => {
@@ -61,5 +62,25 @@ describe('App shell', () => {
     expect(await findByText('How Covet manages money')).toBeTruthy();
     fireEvent.press(await findByLabelText('Close'));
     expect(queryByText('How Covet manages money')).toBeNull();
+  });
+});
+
+describe('App first run', () => {
+  beforeEach(() => {
+    useAppStore.setState({ onboardingComplete: false, activeTab: 'home', overlay: 'none' });
+  });
+
+  it('shows Onboarding before the tab shell on first run', async () => {
+    const { findByText, queryByText } = render(<App />);
+    expect(await findByText("Let's get you fitted.")).toBeTruthy();
+    // The Home hero is not mounted while onboarding is in front.
+    expect(queryByText('3 Commitments Protected.')).toBeNull();
+  });
+
+  it('routes into Home once onboarding completes', async () => {
+    const { findByText } = render(<App />);
+    await findByText("Let's get you fitted.");
+    useAppStore.getState().completeOnboarding();
+    expect(await findByText('$316')).toBeTruthy();
   });
 });

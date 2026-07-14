@@ -8,5 +8,6 @@ export * from './CheckX';
 export * from './Segmented';
 export * from './WalletVisual';
 export * from './Wordmark';
+export * from './Glasses';
 export * from './ChatFab';
 export * from './icons';
