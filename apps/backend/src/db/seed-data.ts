@@ -1,4 +1,5 @@
 import type {
+  Account,
   ActivityAction,
   Commitment,
   Insight,
@@ -182,6 +183,32 @@ const MERCHANTS: ReadonlyArray<[string, number]> = [
 ];
 
 const ACCOUNT_ID = '00000000-0000-4000-8000-000000000501';
+const BANK_CONNECTION_ID = '00000000-0000-4000-8000-0000000005a1';
+
+/**
+ * One active checking account. Only `checking` subtypes feed usable cash
+ * (docs/02_financial_engine.md), so this is what the engine draws Safe to
+ * Spend from when the orchestrator recalculates.
+ */
+export const demoAccounts: Account[] = [
+  {
+    id: ACCOUNT_ID,
+    userId: DEMO_USER_ID,
+    bankConnectionId: BANK_CONNECTION_ID,
+    providerAccountId: 'demo-acct',
+    name: 'Everyday Checking',
+    officialName: null,
+    type: 'depository',
+    subtype: 'checking',
+    maskLast4: '4291',
+    currentBalance: 2500_00,
+    availableBalance: 2500_00,
+    creditLimit: null,
+    isoCurrencyCode: 'USD',
+    lastSyncedAt: NOW,
+    status: 'active',
+  },
+];
 
 /** 26 transactions — past the >=25 threshold, so Insights may appear. */
 export const demoTransactions: Transaction[] = Array.from({ length: 26 }, (_, i) => {

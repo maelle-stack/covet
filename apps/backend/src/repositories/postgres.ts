@@ -1,4 +1,5 @@
 import type {
+  Account,
   ActivityFeedResponse,
   Cents,
   Commitment,
@@ -8,20 +9,21 @@ import type {
   SafeToSpendSnapshot,
   Transaction,
   UpcomingResponse,
+  User,
   UserSettings,
   Vault,
 } from '@covet/shared-types';
 import type { Sql } from 'postgres';
 
-import { gateInsights, type CovetRepositories } from './types';
+import { gateInsights, type CovetRepositories, type EngineInputBundle } from './types';
 
 /**
  * Postgres-backed repository. Hand-written SQL keeps money as bigint cents
  * and maps snake_case columns to the camelCase shared-types models here and
- * nowhere else. Read-only for 6.1; scoped by userId on every query as
- * defense in depth alongside RLS.
+ * nowhere else. Reads plus the 6.2 recalculation/write methods; every query
+ * is scoped by userId as defense in depth alongside RLS.
  *
- * Only the tables the current read endpoints need are queried. Actions are
+ * Only the tables the current endpoints need are queried. Actions are
  * produced by the context engine in a later checkpoint, so they read as an
  * empty list here.
  */
@@ -231,6 +233,43 @@ function mapPurchaseCheck(r: any): PurchaseCheck {
     followUpAt: isoOrNull(r.follow_up_at),
   };
 }
+
+function mapUser(r: any): User {
+  return {
+    id: r.id,
+    createdAt: iso(r.created_at),
+    updatedAt: iso(r.updated_at),
+    firstName: r.first_name,
+    timezone: r.timezone,
+    locale: r.locale,
+    onboardingStatus: r.onboarding_status,
+    primaryArchetype: r.primary_archetype,
+    secondaryArchetype: r.secondary_archetype,
+    activeGoal: r.active_goal,
+    strictnessLevel: r.strictness_level,
+    accountStatus: r.account_status,
+  };
+}
+
+function mapAccount(r: any): Account {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    bankConnectionId: r.bank_connection_id,
+    providerAccountId: r.provider_account_id,
+    name: r.name,
+    officialName: r.official_name,
+    type: r.type,
+    subtype: r.subtype,
+    maskLast4: r.mask_last4,
+    currentBalance: cents(r.current_balance),
+    availableBalance: centsOrNull(r.available_balance),
+    creditLimit: centsOrNull(r.credit_limit),
+    isoCurrencyCode: r.iso_currency_code,
+    lastSyncedAt: isoOrNull(r.last_synced_at),
+    status: r.status,
+  };
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function createPostgresRepositories(sql: Sql): CovetRepositories {
@@ -293,6 +332,96 @@ export function createPostgresRepositories(sql: Sql): CovetRepositories {
         select * from purchase_checks where user_id = ${userId}
         order by created_at asc limit 1`;
       return rows[0] ? mapPurchaseCheck(rows[0]) : null;
+    },
+
+    async getEngineInputs(userId): Promise<EngineInputBundle | null> {
+      const userRows = await sql`select * from users where id = ${userId} limit 1`;
+      if (!userRows[0]) return null;
+
+      const [accountRows, txnRows, commitmentRows, recurringRows, vaultRows, bankRows, calRows] =
+        await Promise.all([
+          sql`select * from accounts where user_id = ${userId}`,
+          sql`select * from transactions where user_id = ${userId}`,
+          sql`select * from commitments where user_id = ${userId}`,
+          sql`select * from recurring_items where user_id = ${userId}`,
+          sql`select * from vaults where user_id = ${userId}`,
+          sql`select status from bank_connections where user_id = ${userId}
+              order by created_at desc limit 1`,
+          sql`select 1 from calendar_connections
+              where user_id = ${userId} and status = 'active' limit 1`,
+        ]);
+
+      return {
+        user: mapUser(userRows[0]),
+        accounts: accountRows.map(mapAccount),
+        transactions: txnRows.map(mapTransaction),
+        commitments: commitmentRows.map(mapCommitment),
+        recurringItems: recurringRows.map(mapRecurring),
+        vaults: vaultRows.map(mapVault),
+        bankConnectionStatus: bankRows[0] ? bankRows[0].status : 'disconnected',
+        calendarConnected: Boolean(calRows[0]),
+      };
+    },
+
+    async appendSnapshot(s): Promise<void> {
+      const json = (value: unknown) => sql.json(JSON.parse(JSON.stringify(value)));
+      await sql`
+        insert into safe_to_spend_snapshots (id, user_id, amount, pay_cycle_start, pay_cycle_end,
+          days_until_next_income, daily_pace, internal_projected_pace, status, confidence_score,
+          external_confidence_label, protected_hard_commitments, protected_semi_hard_commitments,
+          protected_soft_commitments, pace_projection, debt_pressure_level,
+          obligation_pressure_level, emergency_floor_applied, behavior_buffer_applied,
+          major_change_flags, explanation_summary, last_calculated_at, stale_after, inputs_hash)
+        values (${s.id}, ${s.userId}, ${s.amount}, ${s.payCycleStart}, ${s.payCycleEnd},
+          ${s.daysUntilNextIncome}, ${s.dailyPace}, ${s.internalProjectedPace}, ${s.status},
+          ${s.confidenceScore}, ${s.externalConfidenceLabel},
+          ${json(s.protectedHardCommitments)}, ${json(s.protectedSemiHardCommitments)},
+          ${json(s.protectedSoftCommitments)}, ${json(s.paceProjection)}, ${s.debtPressureLevel},
+          ${s.obligationPressureLevel}, ${s.emergencyFloorApplied}, ${s.behaviorBufferApplied},
+          ${s.majorChangeFlags}, ${s.explanationSummary}, ${s.lastCalculatedAt}, ${s.staleAfter},
+          ${s.inputsHash})`;
+    },
+
+    async getCommitment(userId, commitmentId) {
+      const rows = await sql`
+        select * from commitments where id = ${commitmentId} and user_id = ${userId} limit 1`;
+      return rows[0] ? mapCommitment(rows[0]) : null;
+    },
+
+    async setCommitmentStatus(userId, commitmentId, patch) {
+      const rows = await sql`
+        update commitments set
+          status = ${patch.status},
+          user_confirmed = coalesce(${patch.userConfirmed ?? null}, user_confirmed),
+          user_denied = coalesce(${patch.userDenied ?? null}, user_denied),
+          confirmed_amount = coalesce(${patch.confirmedAmount ?? null}, confirmed_amount),
+          updated_at = now()
+        where id = ${commitmentId} and user_id = ${userId}
+        returning *`;
+      return rows[0] ? mapCommitment(rows[0]) : null;
+    },
+
+    async updateUserSettings(userId, patch) {
+      const rows = await sql`
+        update user_settings set
+          notification_privacy_level =
+            coalesce(${patch.notificationPrivacyLevel ?? null}, notification_privacy_level),
+          daily_pacing_notifications_enabled =
+            coalesce(${patch.dailyPacingNotificationsEnabled ?? null},
+              daily_pacing_notifications_enabled),
+          sale_alerts_enabled = coalesce(${patch.saleAlertsEnabled ?? null}, sale_alerts_enabled),
+          vault_notifications_enabled =
+            coalesce(${patch.vaultNotificationsEnabled ?? null}, vault_notifications_enabled),
+          review_prompts_enabled =
+            coalesce(${patch.reviewPromptsEnabled ?? null}, review_prompts_enabled),
+          biometric_lock_enabled =
+            coalesce(${patch.biometricLockEnabled ?? null}, biometric_lock_enabled),
+          calendar_suggestions_enabled =
+            coalesce(${patch.calendarSuggestionsEnabled ?? null}, calendar_suggestions_enabled),
+          updated_at = now()
+        where user_id = ${userId}
+        returning *`;
+      return rows[0] ? mapSettings(rows[0]) : null;
     },
 
     async close() {

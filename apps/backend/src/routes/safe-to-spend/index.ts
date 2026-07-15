@@ -1,14 +1,24 @@
 import { Router } from 'express';
 
-import type { GetCurrentSafeToSpendResponse } from '@covet/shared-types';
+import {
+  RECALCULATION_REASONS,
+  type GetCurrentSafeToSpendResponse,
+  type RecalculateSafeToSpendResponse,
+  type RecalculationReason,
+} from '@covet/shared-types';
 
-import { sendData, sendNotFound } from '../../http/envelope';
+import { sendData, sendError, sendNotFound } from '../../http/envelope';
 import type { CovetRepositories } from '../../repositories';
+import { recalculateSafeToSpend } from '../../services/safe-to-spend/recalculate';
+
+function isReason(value: unknown): value is RecalculationReason {
+  return typeof value === 'string' && (RECALCULATION_REASONS as readonly string[]).includes(value);
+}
 
 /**
- * /safe-to-spend — the Safe to Spend snapshot the engine produced. This
- * route is a pure read: it never calculates Safe to Spend (that stays in the
- * Financial Engine). Recalculation endpoints arrive in a later checkpoint.
+ * /safe-to-spend — the current snapshot (pure read) and an explicit
+ * recalculation trigger. Neither computes money: the engine owns that, and
+ * the orchestrator persists the append-only result.
  */
 export function createSafeToSpendRouter(repos: CovetRepositories): Router {
   const router = Router();
@@ -21,6 +31,24 @@ export function createSafeToSpendRouter(repos: CovetRepositories): Router {
         return;
       }
       sendData<GetCurrentSafeToSpendResponse>(res, { snapshot });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/recalculate', async (req, res, next) => {
+    try {
+      const reason: unknown = req.body?.reason;
+      if (!isReason(reason)) {
+        sendError(res, 400, { code: 'invalid_reason', message: 'A valid reason is required.' });
+        return;
+      }
+      const result = await recalculateSafeToSpend(repos, req.userId!, reason);
+      if (!result) {
+        sendNotFound(res, 'No Safe to Spend inputs for this user.');
+        return;
+      }
+      sendData<RecalculateSafeToSpendResponse>(res, result);
     } catch (err) {
       next(err);
     }

@@ -2,6 +2,7 @@ import { loadConfig } from '../config/env';
 import { createSqlClient } from './client';
 import {
   DEMO_USER_ID,
+  demoAccounts,
   demoCommitments,
   demoInsights,
   demoRecurring,
@@ -22,7 +23,6 @@ import {
  * Usage: DATABASE_URL=... pnpm --filter @covet/backend seed
  */
 const BANK_CONNECTION_ID = '00000000-0000-4000-8000-0000000005a1';
-const ACCOUNT_ID = '00000000-0000-4000-8000-000000000501';
 
 export async function runSeed(databaseUrl: string): Promise<void> {
   const sql = createSqlClient(databaseUrl);
@@ -63,11 +63,15 @@ export async function runSeed(databaseUrl: string): Promise<void> {
         values (${BANK_CONNECTION_ID}, ${DEMO_USER_ID}, 'plaid', 'demo-item',
           'Demo Bank', 'active')`;
 
-      await tx`
-        insert into accounts (id, user_id, bank_connection_id, provider_account_id, name,
-          type, subtype, current_balance, iso_currency_code, status)
-        values (${ACCOUNT_ID}, ${DEMO_USER_ID}, ${BANK_CONNECTION_ID}, 'demo-acct',
-          'Everyday Checking', 'depository', 'checking', ${316_00}, 'USD', 'active')`;
+      for (const a of demoAccounts) {
+        await tx`
+          insert into accounts (id, user_id, bank_connection_id, provider_account_id, name,
+            official_name, type, subtype, mask_last4, current_balance, available_balance,
+            iso_currency_code, last_synced_at, status)
+          values (${a.id}, ${a.userId}, ${a.bankConnectionId}, ${a.providerAccountId}, ${a.name},
+            ${a.officialName}, ${a.type}, ${a.subtype}, ${a.maskLast4}, ${a.currentBalance},
+            ${a.availableBalance}, ${a.isoCurrencyCode}, ${a.lastSyncedAt}, ${a.status})`;
+      }
 
       for (const t of demoTransactions) {
         await tx`

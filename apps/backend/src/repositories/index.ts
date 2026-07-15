@@ -4,7 +4,12 @@ import { createMemoryRepositories } from './memory';
 import { createPostgresRepositories } from './postgres';
 import type { CovetRepositories } from './types';
 
-export type { CovetRepositories } from './types';
+export type {
+  CovetRepositories,
+  EngineInputBundle,
+  CommitmentStatusPatch,
+  UserSettingsPatch,
+} from './types';
 
 /**
  * Resolves the repository implementation for the configured data source.

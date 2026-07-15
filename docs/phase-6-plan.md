@@ -42,7 +42,8 @@ actions; rate-limit recalculation and purchase-check endpoints.
    no external providers)_: env/config, Postgres client, migration runner,
    seed, repository layer, Express envelope + read endpoints, and the mobile
    fixture/live toggle. Proves fixture→live is a config switch, not a rewrite.
-2. **6.2** — Write endpoints + snapshot recalculation orchestrator.
+2. **6.2 — Write endpoints + snapshot recalculation orchestrator** _(delivered;
+   still no external providers)_.
 3. **6.3** — Supabase Auth _(gated)_.
 4. **6.4** — Plaid + transaction sync _(gated)_.
 5. **6.5** — Calendar _(gated)_.
@@ -60,6 +61,26 @@ actions; rate-limit recalculation and purchase-check endpoints.
   placeholder scopes requests by `x-covet-user-id` (real JWT verification is
   6.3). Explicitly **not** in 6.1: real auth, Plaid, calendar, push, AI, write
   and recalculation endpoints, and the full 19-entity repository layer.
+
+## 6.2 scope (delivered)
+
+- Recalculation orchestrator (`services/safe-to-spend/recalculate.ts`): the
+  single caller of the Financial Engine. It gathers persisted inputs, layers on
+  conservative defaults for the not-yet-modeled signals (income cadence,
+  expected income, pending income, payoff behavior — pattern/Plaid-derived
+  later), runs the pure engine, and appends the result. Idempotent: unchanged
+  inputs (same inputs hash) are a no-op.
+- Write endpoints, all backend-only (no mobile screen changes): `POST
+  /safe-to-spend/recalculate`, `POST /commitments/:id/confirm`, `POST
+  /commitments/:id/deny` (both mutate then recalculate and return the fresh
+  snapshot), and `PATCH /settings` (notification/privacy prefs only —
+  engine-affecting fields like strictness are excluded so a settings write
+  never moves Safe to Spend).
+- The in-memory repository is now a mutable, per-instance store; the Postgres
+  repository implements the same write/recalc methods. A demo checking account
+  was added to the seed so the engine has usable cash to compute from.
+- Still **not** in 6.2: real auth, Plaid, transaction sync, calendar, push, AI,
+  and mobile write-client wiring (no Phase 5 screen performs writes yet).
 
 ## Local dev
 

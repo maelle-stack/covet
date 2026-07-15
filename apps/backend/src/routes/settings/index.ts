@@ -1,14 +1,41 @@
 import { Router } from 'express';
 
-import type { GetSettingsResponse } from '@covet/shared-types';
+import type {
+  GetSettingsResponse,
+  UpdateSettingsRequest,
+  UpdateSettingsResponse,
+} from '@covet/shared-types';
 
 import { sendData, sendNotFound } from '../../http/envelope';
 import type { CovetRepositories } from '../../repositories';
+import type { UserSettingsPatch } from '../../repositories/types';
+
+/** Notification/privacy fields a PATCH may set (engine-affecting fields excluded). */
+const WRITABLE_KEYS: readonly (keyof UserSettingsPatch)[] = [
+  'notificationPrivacyLevel',
+  'dailyPacingNotificationsEnabled',
+  'saleAlertsEnabled',
+  'vaultNotificationsEnabled',
+  'reviewPromptsEnabled',
+  'biometricLockEnabled',
+  'calendarSuggestionsEnabled',
+];
+
+function pickPatch(body: UpdateSettingsRequest | undefined): UserSettingsPatch {
+  const patch: UserSettingsPatch = {};
+  if (!body) return patch;
+  for (const key of WRITABLE_KEYS) {
+    const value = body[key];
+    if (value !== undefined) (patch as Record<string, unknown>)[key] = value;
+  }
+  return patch;
+}
 
 /**
- * /settings — the user's settings. Read-only in 6.1; the settings write path
- * (PATCH) lands with the write endpoints in a later checkpoint, so the
- * Settings screen's toggles stay visual-only for now.
+ * /settings — read and update notification/privacy preferences. These do not
+ * feed the Financial Engine, so a settings write never moves Safe to Spend
+ * (strictness lives on the user and gets its own endpoint later). Only the
+ * allow-listed keys are applied.
  */
 export function createSettingsRouter(repos: CovetRepositories): Router {
   const router = Router();
@@ -21,6 +48,20 @@ export function createSettingsRouter(repos: CovetRepositories): Router {
         return;
       }
       sendData<GetSettingsResponse>(res, { settings });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.patch('/', async (req, res, next) => {
+    try {
+      const patch = pickPatch(req.body as UpdateSettingsRequest | undefined);
+      const settings = await repos.updateUserSettings(req.userId!, patch);
+      if (!settings) {
+        sendNotFound(res, 'No settings found.');
+        return;
+      }
+      sendData<UpdateSettingsResponse>(res, { settings });
     } catch (err) {
       next(err);
     }

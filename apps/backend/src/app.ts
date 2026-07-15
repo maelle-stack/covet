@@ -4,6 +4,7 @@ import { devAuth } from './http/auth';
 import { sendError } from './http/envelope';
 import type { CovetRepositories } from './repositories';
 import { createActivityRouter } from './routes/activity';
+import { createCommitmentsRouter } from './routes/commitments';
 import { createPurchaseChecksRouter } from './routes/purchase-checks';
 import { createSafeToSpendRouter } from './routes/safe-to-spend';
 import { createSettingsRouter } from './routes/settings';
@@ -31,6 +32,7 @@ export function createApp(repos: CovetRepositories): Express {
   app.use('/activity', devAuth, createActivityRouter(repos));
   app.use('/upcoming', devAuth, createUpcomingRouter(repos));
   app.use('/settings', devAuth, createSettingsRouter(repos));
+  app.use('/commitments', devAuth, createCommitmentsRouter(repos));
   app.use('/purchase-checks', devAuth, createPurchaseChecksRouter(repos));
 
   // Central error handler — always emits the calm `{ error }` envelope.
