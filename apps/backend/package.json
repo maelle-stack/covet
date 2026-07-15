@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "migrate": "tsx src/db/migrate.ts",
+    "seed": "tsx src/db/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "jest"
@@ -14,7 +16,8 @@
   "dependencies": {
     "@covet/shared-types": "workspace:*",
     "@supabase/supabase-js": "^2.45.0",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

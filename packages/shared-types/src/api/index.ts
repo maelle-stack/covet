@@ -12,3 +12,6 @@ export * from './commitments';
 export * from './patterns';
 export * from './purchase-checks';
 export * from './notifications';
+export * from './activity';
+export * from './upcoming';
+export * from './settings';

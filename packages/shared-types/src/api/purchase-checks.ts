@@ -15,3 +15,12 @@ export interface CreatePurchaseCheckRequest {
 export interface CreatePurchaseCheckResponse {
   purchaseCheck: PurchaseCheck;
 }
+
+/**
+ * GET /purchase-checks/seed — the opening exchange the Purchase Check thread
+ * starts from. Read-only; the create flow (POST) arrives with the AI
+ * abstraction in a later checkpoint.
+ */
+export interface SeedPurchaseCheckResponse {
+  purchaseCheck: PurchaseCheck;
+}

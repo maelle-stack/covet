@@ -12,19 +12,22 @@ import type {
 } from '@covet/shared-types';
 
 /**
- * Typed fixture data backing the pre-integration API client, shaped
- * EXACTLY like the shared domain models. The screens are production
- * screens; only this data source is swapped for the real backend in
- * Phase 6. No Safe to Spend math happens client-side. The demo state
- * mirrors the canonical Home reference: $316 Safe to Spend, YOU'RE GOOD,
- * $50.00/day pace, three protected commitments.
+ * Canonical demo dataset — the single source of truth for both the Postgres
+ * `seed` script and the in-memory repository. It mirrors the DISPLAYED
+ * values of the mobile app's fixtures ($316 / YOU'RE GOOD / $50.00/day, 26
+ * transactions, the same recurring items and vaults) so switching the app
+ * from fixture mode to live mode is visually invisible.
+ *
+ * This is pre-integration demo data, not production seed. Real data arrives
+ * via Plaid/calendar sync in later checkpoints. IDs are UUIDs so the same
+ * dataset loads cleanly into the UUID-keyed schema.
  */
 
-const USER_ID = 'demo-user';
+export const DEMO_USER_ID = '00000000-0000-4000-8000-000000000001';
 const NOW = '2026-07-04T16:00:00Z';
 
 export const demoUser: User = {
-  id: USER_ID,
+  id: DEMO_USER_ID,
   createdAt: '2026-05-01T00:00:00Z',
   updatedAt: NOW,
   firstName: 'Maelle',
@@ -39,7 +42,7 @@ export const demoUser: User = {
 };
 
 export const demoSettings: UserSettings = {
-  userId: USER_ID,
+  userId: DEMO_USER_ID,
   createdAt: '2026-05-01T00:00:00Z',
   updatedAt: NOW,
   quietHours: { start: '21:00', end: '09:00' },
@@ -55,9 +58,16 @@ export const demoSettings: UserSettings = {
   analyticsOptOut: false,
 };
 
+const RENT_ID = '00000000-0000-4000-8000-000000000101';
+const CARD_MIN_ID = '00000000-0000-4000-8000-000000000102';
+const BIRTHDAY_ID = '00000000-0000-4000-8000-000000000103';
+const RECURRING_RENT_ID = '00000000-0000-4000-8000-000000000201';
+const RECURRING_BRUNCH_ID = '00000000-0000-4000-8000-000000000202';
+const RECURRING_PILATES_ID = '00000000-0000-4000-8000-000000000203';
+
 const rentCommitment: Commitment = {
-  id: 'commitment-rent',
-  userId: USER_ID,
+  id: RENT_ID,
+  userId: DEMO_USER_ID,
   source: 'transaction_detected',
   title: 'Rent',
   amount: 1200_00,
@@ -74,7 +84,7 @@ const rentCommitment: Commitment = {
   userDenied: false,
   linkedCalendarEventId: null,
   linkedTransactionId: null,
-  linkedRecurringItemId: 'recurring-rent',
+  linkedRecurringItemId: RECURRING_RENT_ID,
   createdAt: '2026-05-02T00:00:00Z',
   updatedAt: NOW,
   metadata: null,
@@ -82,7 +92,7 @@ const rentCommitment: Commitment = {
 
 const cardMinimumCommitment: Commitment = {
   ...rentCommitment,
-  id: 'commitment-card-minimum',
+  id: CARD_MIN_ID,
   title: 'Card minimum',
   amount: 35_00,
   confirmedAmount: 35_00,
@@ -94,7 +104,7 @@ const cardMinimumCommitment: Commitment = {
 
 const birthdayDinnerCommitment: Commitment = {
   ...rentCommitment,
-  id: 'commitment-birthday-dinner',
+  id: BIRTHDAY_ID,
   source: 'calendar',
   title: 'Birthday dinner',
   amount: 90_00,
@@ -107,7 +117,7 @@ const birthdayDinnerCommitment: Commitment = {
   protectedAmount: 0,
   confidence: 78,
   userConfirmed: false,
-  linkedCalendarEventId: 'calevent-birthday',
+  linkedCalendarEventId: '00000000-0000-4000-8000-000000000301',
   linkedRecurringItemId: null,
 };
 
@@ -118,8 +128,8 @@ export const demoCommitments: Commitment[] = [
 ];
 
 export const demoSnapshot: SafeToSpendSnapshot = {
-  id: 'snapshot-demo',
-  userId: USER_ID,
+  id: '00000000-0000-4000-8000-000000000401',
+  userId: DEMO_USER_ID,
   amount: 316_00,
   payCycleStart: '2026-07-04',
   payCycleEnd: '2026-07-10',
@@ -131,18 +141,13 @@ export const demoSnapshot: SafeToSpendSnapshot = {
   confidenceScore: 88,
   externalConfidenceLabel: 'high',
   protectedHardCommitments: [
-    { commitmentId: rentCommitment.id, title: 'Rent', hardness: 'hard', protectedAmount: 1200_00 },
-    {
-      commitmentId: cardMinimumCommitment.id,
-      title: 'Card minimum',
-      hardness: 'hard',
-      protectedAmount: 35_00,
-    },
+    { commitmentId: RENT_ID, title: 'Rent', hardness: 'hard', protectedAmount: 1200_00 },
+    { commitmentId: CARD_MIN_ID, title: 'Card minimum', hardness: 'hard', protectedAmount: 35_00 },
   ],
   protectedSemiHardCommitments: [],
   protectedSoftCommitments: [
     {
-      commitmentId: 'commitment-brunch',
+      commitmentId: '00000000-0000-4000-8000-000000000104',
       title: 'Brunch',
       hardness: 'soft',
       protectedAmount: 75_00,
@@ -176,14 +181,16 @@ const MERCHANTS: ReadonlyArray<[string, number]> = [
   ['Whole Foods', 58_25],
 ];
 
+const ACCOUNT_ID = '00000000-0000-4000-8000-000000000501';
+
 /** 26 transactions — past the >=25 threshold, so Insights may appear. */
 export const demoTransactions: Transaction[] = Array.from({ length: 26 }, (_, i) => {
   const [merchantName, amount] = MERCHANTS[i % MERCHANTS.length] as [string, number];
   const day = String(Math.max(1, 28 - i)).padStart(2, '0');
   return {
-    id: `txn-${i + 1}`,
-    userId: USER_ID,
-    accountId: 'account-checking',
+    id: `00000000-0000-4000-8000-0000006${String(i + 1).padStart(5, '0')}`,
+    userId: DEMO_USER_ID,
+    accountId: ACCOUNT_ID,
     providerTransactionId: `provider-txn-${i + 1}`,
     amount,
     merchantName,
@@ -207,8 +214,8 @@ export const demoTransactions: Transaction[] = Array.from({ length: 26 }, (_, i)
 
 export const demoInsights: Insight[] = [
   {
-    id: 'insight-1',
-    userId: USER_ID,
+    id: '00000000-0000-4000-8000-000000000701',
+    userId: DEMO_USER_ID,
     insightType: 'timing_observation',
     title: 'Your weekends run warm',
     body: 'Most of your flexible spending lands Friday through Sunday. I plan around it, so weekdays feel roomier than they look.',
@@ -217,17 +224,38 @@ export const demoInsights: Insight[] = [
     generatedAt: NOW,
     expiresAt: null,
     status: 'active',
-    relatedTransactionIds: ['txn-3', 'txn-10', 'txn-17'],
+    relatedTransactionIds: [],
     relatedPatternIds: [],
     relatedCommitmentIds: [],
     userFeedback: null,
   },
 ];
 
+export const demoActions: ActivityAction[] = [
+  {
+    id: 'action-birthday-dinner',
+    kind: 'commitment_candidate',
+    body: "Does Saturday's birthday dinner need money set aside? I'd plan around $90.",
+    relatedEntityId: BIRTHDAY_ID,
+  },
+  {
+    id: 'action-brunch',
+    kind: 'recurring_detected',
+    body: 'Looks like brunch usually lands around $75 on weekends. Plan around this?',
+    relatedEntityId: RECURRING_BRUNCH_ID,
+  },
+  {
+    id: 'action-payday',
+    kind: 'pattern_confirmation',
+    body: 'Looks like payday is every other Friday. Confirm?',
+    relatedEntityId: '00000000-0000-4000-8000-000000000801',
+  },
+];
+
 export const demoRecurring: RecurringItem[] = [
   {
-    id: 'recurring-brunch',
-    userId: USER_ID,
+    id: RECURRING_BRUNCH_ID,
+    userId: DEMO_USER_ID,
     title: 'Brunch',
     merchantName: 'Marlow & Sons',
     amountEstimate: 75_00,
@@ -237,7 +265,7 @@ export const demoRecurring: RecurringItem[] = [
     hardness: 'soft',
     confidence: 84,
     status: 'detected',
-    linkedPatternId: 'pattern-brunch',
+    linkedPatternId: null,
     lastSeenAt: '2026-06-28T15:00:00Z',
     userConfirmed: false,
     userPaused: false,
@@ -246,8 +274,8 @@ export const demoRecurring: RecurringItem[] = [
     metadata: null,
   },
   {
-    id: 'recurring-rent',
-    userId: USER_ID,
+    id: RECURRING_RENT_ID,
+    userId: DEMO_USER_ID,
     title: 'Rent',
     merchantName: null,
     amountEstimate: 1200_00,
@@ -266,8 +294,8 @@ export const demoRecurring: RecurringItem[] = [
     metadata: null,
   },
   {
-    id: 'recurring-pilates',
-    userId: USER_ID,
+    id: RECURRING_PILATES_ID,
+    userId: DEMO_USER_ID,
     title: 'Pilates',
     merchantName: 'Pilates Studio',
     amountEstimate: 50_00,
@@ -289,8 +317,8 @@ export const demoRecurring: RecurringItem[] = [
 
 export const demoVaults: Vault[] = [
   {
-    id: 'vault-camera',
-    userId: USER_ID,
+    id: '00000000-0000-4000-8000-000000000901',
+    userId: DEMO_USER_ID,
     title: 'Camera',
     targetAmount: 600_00,
     currentProtectedAmount: 180_00,
@@ -310,8 +338,8 @@ export const demoVaults: Vault[] = [
   {
     // Passive desire: saved but NOT actively protected, so it does not
     // reduce Safe to Spend and Upcoming must present it as such.
-    id: 'vault-jacket',
-    userId: USER_ID,
+    id: '00000000-0000-4000-8000-000000000902',
+    userId: DEMO_USER_ID,
     title: 'Jacket',
     targetAmount: 180_00,
     currentProtectedAmount: 0,
@@ -330,45 +358,9 @@ export const demoVaults: Vault[] = [
   },
 ];
 
-/**
- * Activity "Actions": something that needs quick user attention
- * (docs/01_consumer_experience.md). The `ActivityAction` shape is the shared
- * API contract; copy is backend-authored — in production these come from the
- * context/pattern services; the screen never composes review language itself.
- */
-export type { ActivityAction };
-
-export const demoActions: ActivityAction[] = [
-  {
-    id: 'action-birthday-dinner',
-    kind: 'commitment_candidate',
-    body: "Does Saturday's birthday dinner need money set aside? I'd plan around $90.",
-    relatedEntityId: 'commitment-birthday-dinner',
-  },
-  {
-    id: 'action-brunch',
-    kind: 'recurring_detected',
-    body: 'Looks like brunch usually lands around $75 on weekends. Plan around this?',
-    relatedEntityId: 'recurring-brunch',
-  },
-  {
-    id: 'action-payday',
-    kind: 'pattern_confirmation',
-    body: 'Looks like payday is every other Friday. Confirm?',
-    relatedEntityId: 'pattern-payday',
-  },
-];
-
-/**
- * Canned Purchase Check exchanges. Every decision and its reason come from
- * the "backend" fixture — the UI never parses input or computes
- * affordability. The seeded thread opens on the $180 jacket "wait"
- * exchange; `demoPurchaseCheckReplies` supplies canned responses returned
- * (in order) as the user sends messages, covering yes / wait / no.
- */
-export const demoPurchaseCheckResponse: PurchaseCheck = {
-  id: 'pc-jacket',
-  userId: USER_ID,
+export const demoSeedPurchaseCheck: PurchaseCheck = {
+  id: '00000000-0000-4000-8000-000000001001',
+  userId: DEMO_USER_ID,
   inputType: 'text',
   rawInput: 'can i buy this $180 jacket?',
   parsedItemName: 'Jacket',
@@ -385,39 +377,3 @@ export const demoPurchaseCheckResponse: PurchaseCheck = {
   createdAt: NOW,
   followUpAt: '2026-07-10T14:00:00Z',
 };
-
-export const demoPurchaseCheckReplies: PurchaseCheck[] = [
-  {
-    ...demoPurchaseCheckResponse,
-    id: 'pc-coffee',
-    rawInput: 'can i grab coffee?',
-    parsedItemName: 'Coffee',
-    parsedPrice: 6_00,
-    decision: 'yes',
-    decisionReason: "You're good. Rent and your birthday dinner are still covered.",
-    safeToSpendAfterHypothetical: 310_00,
-    followUpAt: null,
-  },
-  {
-    ...demoPurchaseCheckResponse,
-    id: 'pc-flight',
-    rawInput: 'can i book this $420 flight?',
-    parsedItemName: 'Flight',
-    parsedPrice: 420_00,
-    decision: 'no',
-    decisionReason: "Let's not — this would put rent at risk before payday.",
-    safeToSpendAfterHypothetical: -104_00,
-    statusAtDecision: 'YOURE_GOOD',
-    followUpAt: null,
-  },
-  {
-    ...demoPurchaseCheckResponse,
-    id: 'pc-jacket-2',
-    rawInput: 'what about the jacket now?',
-    parsedItemName: 'Jacket',
-    parsedPrice: 180_00,
-    decision: 'wait',
-    decisionReason: "I'd still wait until Friday. You'll have room once payday lands.",
-    followUpAt: '2026-07-10T14:00:00Z',
-  },
-];
